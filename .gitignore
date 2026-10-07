@@ -1,0 +1,30 @@
+# Simulink 编译缓存目录
+slprj/
+*.slxc
+simulink_cache.xml
+
+# MATLAB 自动备份、临时文件
+*.asv
+*.autosave
+*.m~
+*.bak
+matlab.prf
+*.rpt
+*.log
+*.fig.lock
+
+# MEX 编译二进制文件
+*.mex*
+
+# Python 缓存（预留，后续加Python代码时生效）
+__pycache__/
+*.pyc
+
+# 系统垃圾文件
+.DS_Store
+Thumbs.db
+
+# 仿真输出、临时训练结果目录
+out/
+results/
+trained_agent_temp/
