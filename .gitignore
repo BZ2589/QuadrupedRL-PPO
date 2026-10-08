@@ -28,3 +28,9 @@ Thumbs.db
 out/
 results/
 trained_agent_temp/
+
+# PPO 训练检查点文件（中间文件，体积大）
+checkpoint_status.txt
+rlQuadrupedPPOAgentParams_*.mat
+rlQuadrupedPPO_final_*.mat
+checkpoints/

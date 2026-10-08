@@ -40,56 +40,90 @@
 - MATLAB R2022a 或更高版本（支持 `rlPPOAgent`）
 - Reinforcement Learning Toolbox™
 - Simscape™ Multibody™
+- Parallel Computing Toolbox™（可选，用于并行训练加速）
 
-### 运行步骤
+### 快速开始
 
-1. 克隆或下载本项目
-2. 在 MATLAB 中切换到项目目录：
+#### 方式一：使用 Live Script
+
+1. 在 MATLAB 中切换到项目目录：
    ```matlab
    cd('path\to\QuadrupedRL-PPO')
    ```
-3. 运行 `init` 或直接打开 `RLQuadrupedRobotExample.mlx`
-4. 在 MATLAB Live Editor 中逐个运行代码段
+2. 打开 `RLQuadrupedRobotExample.mlx`
+3. 在 MATLAB Live Editor 中逐个运行代码段
+
+#### 方式二：使用训练脚本（推荐）
+
+```matlab
+% 切换到项目目录
+cd('path\to\QuadrupedRL-PPO')
+
+% 开始新训练（可视化已关闭，速度更快）
+trainPPO
+
+% 查看训练状态
+trainPPO('status')
+
+% 从检查点续训（中断后恢复）
+trainPPO('resume')
+```
 
 ### 训练说明
 
-- 默认 `doTraining = false`，加载预训练参数进行仿真验证
-- 将 `doTraining` 设置为 `true` 可从头开始训练（需要较长时间，建议启用并行训练）
-- 训练时使用 `rlEvaluator` 每 25 个回合评估一次策略性能
+- **命令行进度输出**：每 10 回合打印一行进度，包含奖励、耗时和预计剩余时间
+- **3D 可视化已关闭**：Multibody Explorer 3D 窗口自动关闭，训练窗口已关闭以最大化训练速度
+- **断点续训**：每 10 回合保存检查点，中断后可从断点继续
+- **断点续训**：每 50 回合自动保存检查点，中断后可从断点继续
+- **训练时间**：串行训练约数小时，建议分多次完成（利用断点续训）
+- **训练完成后**：参数保存到 `rlQuadrupedPPOAgentParams_final.mat`
 
-## 结果说明
+### 断点续训工作流程
 
-### 代码验证
+```
+第 1 次运行：trainPPO          → 训练 100 回合后手动停止（Ctrl+C）
+第  2 次运行：trainPPO          → 从第 101 回合继续
+...
+完成后：参数自动保存到 rlQuadrupedPPOAgentParams_final.mat
+```
 
-PPO Agent 已成功创建并运行仿真。由于网络架构差异（PPO 的 Actor 输出动作分布参数，DDPG 的 Actor 输出确定性动作值），**原 DDPG 预训练参数无法直接用于 PPO**。
+> 注：续训与一次性训练效果基本一致。唯一差异是优化器动量状态会重新初始化，对最终性能影响可忽略。
 
-### 仿真对比
+## PPO Agent 参数配置
 
-| Agent | 预训练参数 | 仿真结果 |
-|-------|-----------|----------|
-| DDPG | 可用 | 可正常行走（需使用参考项目中的模型） |
-| PPO | 需重新训练 | 随机初始化时无法行走（预期行为） |
-
-### 下一步
-
-1. 训练 PPO Agent：将 `doTraining` 设为 `true`，训练约 1000 个回合
-2. 保存训练好的 PPO 参数
-3. 对比 DDPG 和 PPO 的行走性能
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| ExperienceHorizon | 2048 | 每次收集的经验步数 |
+| MiniBatchSize | 64 | 小批量梯度更新大小 |
+| ClipFactor | 0.2 | 策略裁剪因子，限制更新幅度 |
+| EntropyLossWeight | 0.01 | 熵正则化权重，鼓励探索 |
+| Actor 学习率 | 3e-4 | Actor 网络优化器学习率 |
+| Critic 学习率 | 3e-4 | Critic 网络优化器学习率 |
+| 梯度阈值 | 1.0 | 梯度裁剪阈值 |
+| 隐藏单元数 | 256 | 每层隐藏单元数量 |
 
 ## 项目文件
 
 ```
 QuadrupedRL-PPO/
 ├── RLQuadrupedRobotExample.mlx   % 主脚本（Live Script）
+├── trainPPO.m                    % PPO 训练脚本
 ├── initializeRobotParameters.m   % 机器人参数初始化
 ├── quadrupedResetFcn.m           % 仿真重置函数
 ├── quadrupedInverseKinematics.m  % 逆运动学计算
 ├── Extr_Data_LinkEndHole.m       % 连杆数据
 ├── Extr_Data_Mesh.m              % 网格数据
-├── rlQuadrupedAgentParams.mat    % 预训练参数（DDPG 版本）
+├── rlQuadrupedAgentParams.mat    % DDPG 预训练参数（参考用）
 ├── rlQuadrupedRobot.slx          % Simulink 模型（未修改）
 └── README.md                     % 项目说明
 ```
+
+## 注意事项
+
+- **DDPG 预训练参数不兼容**：`rlQuadrupedAgentParams.mat` 是 DDPG 版本的预训练参数，由于网络结构不同，无法直接用于 PPO。需要训练新的 PPO Agent。
+- **训练时间较长**：四足机器人 Simulink 模型仿真计算量大，已关闭可视化窗口加速。
+- **Simulink 模型未修改**：`rlQuadrupedRobot.slx` 保持原样，仅 Agent 算法从 DDPG 替换为 PPO。
+- **检查点文件已加入 `.gitignore`**：训练产生的中间文件（`checkpoints/`、`*.mat`）不会被提交到 GitHub。
 
 ## 参考资料
 
